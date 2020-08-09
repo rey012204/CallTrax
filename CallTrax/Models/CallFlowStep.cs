@@ -5,6 +5,11 @@ namespace CallTrax.Models
 {
     public partial class CallFlowStep
     {
+        public CallFlowStep()
+        {
+            CallGather = new HashSet<CallGather>();
+        }
+
         public long CallFlowStepId { get; set; }
         public long CallFlowId { get; set; }
         public short CallFlowStepType { get; set; }
@@ -15,5 +20,6 @@ namespace CallTrax.Models
         public virtual CallFlowStepDial CallFlowStepDial { get; set; }
         public virtual CallFlowStepGather CallFlowStepGather { get; set; }
         public virtual CallFlowStepSay CallFlowStepSay { get; set; }
+        public virtual ICollection<CallGather> CallGather { get; set; }
     }
 }

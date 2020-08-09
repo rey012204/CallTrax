@@ -7,10 +7,10 @@ namespace CallTrax.Models
     {
         public long CallGatherId { get; set; }
         public long CallId { get; set; }
-        public string GatherName { get; set; }
+        public long CallFlowStepId { get; set; }
         public string GatherValue { get; set; }
-        public string GatherValueName { get; set; }
 
         public virtual Call Call { get; set; }
+        public virtual CallFlowStep CallFlowStep { get; set; }
     }
 }

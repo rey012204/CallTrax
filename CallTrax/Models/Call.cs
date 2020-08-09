@@ -7,6 +7,7 @@ namespace CallTrax.Models
     {
         public Call()
         {
+            CallAction = new HashSet<CallAction>();
             CallGather = new HashSet<CallGather>();
         }
 
@@ -15,6 +16,7 @@ namespace CallTrax.Models
         public long CallFlowId { get; set; }
 
         public virtual CallFlow CallFlow { get; set; }
+        public virtual ICollection<CallAction> CallAction { get; set; }
         public virtual ICollection<CallGather> CallGather { get; set; }
     }
 }

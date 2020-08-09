@@ -16,6 +16,7 @@ namespace CallTrax.Models
         }
 
         public virtual DbSet<Call> Call { get; set; }
+        public virtual DbSet<CallAction> CallAction { get; set; }
         public virtual DbSet<CallFlow> CallFlow { get; set; }
         public virtual DbSet<CallFlowStep> CallFlowStep { get; set; }
         public virtual DbSet<CallFlowStepDial> CallFlowStepDial { get; set; }
@@ -49,6 +50,22 @@ namespace CallTrax.Models
                     .HasForeignKey(d => d.CallFlowId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK_Call_CallFlow");
+            });
+
+            modelBuilder.Entity<CallAction>(entity =>
+            {
+                entity.Property(e => e.ActionDateTime).HasColumnType("date");
+
+                entity.Property(e => e.ActionDescription)
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .IsFixedLength();
+
+                entity.HasOne(d => d.Call)
+                    .WithMany(p => p.CallAction)
+                    .HasForeignKey(d => d.CallId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_CallAction_Call");
             });
 
             modelBuilder.Entity<CallFlow>(entity =>
@@ -182,19 +199,16 @@ namespace CallTrax.Models
 
             modelBuilder.Entity<CallGather>(entity =>
             {
-                entity.Property(e => e.GatherName)
-                    .IsRequired()
-                    .HasMaxLength(100)
-                    .IsFixedLength();
-
                 entity.Property(e => e.GatherValue)
                     .IsRequired()
                     .HasMaxLength(50)
                     .IsFixedLength();
 
-                entity.Property(e => e.GatherValueName)
-                    .HasMaxLength(100)
-                    .IsFixedLength();
+                entity.HasOne(d => d.CallFlowStep)
+                    .WithMany(p => p.CallGather)
+                    .HasForeignKey(d => d.CallFlowStepId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_CallGather_CallFlowStep");
 
                 entity.HasOne(d => d.Call)
                     .WithMany(p => p.CallGather)

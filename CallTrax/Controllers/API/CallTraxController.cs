@@ -89,6 +89,23 @@ namespace CallTrax.Controllers.API
                         {
                             gatherValueName = option.OptionDescription;
 
+                            //Saving customer choice
+                            CallGather gather = new CallGather
+                            {
+                                CallId = callId,
+                                CallFlowStepId = step.CallFlowStepId,
+                                GatherValue = digits,
+                            };
+                            context.CallGather.Add(gather);
+                            //Saving Action
+                            context.CallAction.Add(new CallAction
+                            {
+                                CallId = callId,
+                                ActionDateTime = DateTime.Now,
+                                ActionDescription = "Answer: " + digits + " - " + gatherValueName
+                            });
+                            context.SaveChanges();
+
                             CallFlowStep nextStep = context.CallFlowStep.Where(s => s.CallFlowStepId == option.NextCallFlowStepId).FirstOrDefault();
                             if (nextStep == null)
                             {
@@ -99,17 +116,6 @@ namespace CallTrax.Controllers.API
                                 response = GetResponse(callId, nextStep);
                             }
                         }
-
-                        //Saving customer choise
-                        CallGather gather = new CallGather
-                        {
-                            CallId = callId,
-                            GatherName = step.GatherName,
-                            GatherValue = digits,
-                            GatherValueName = gatherValueName
-                        };
-                        context.CallGather.Add(gather);
-                        context.SaveChanges();
                     }
                 }
             }
@@ -132,6 +138,23 @@ namespace CallTrax.Controllers.API
                         case Enums.StepType.Gather:
                             var gather = GetGatherStep(callId, step);
                             response.Append(gather);
+                            //Save Call Action
+                            CallFlowStepGather stepGather = context.CallFlowStepGather.Where(g => g.CallFlowStepId == step.CallFlowStepId).FirstOrDefault();
+                            if(stepGather == null)
+                            {
+                                //TODO
+                            }
+                            else
+                            {
+                                context.CallAction.Add(new CallAction
+                                {
+                                    CallId = callId,
+                                    ActionDateTime = DateTime.Now,
+                                    ActionDescription = "Question: " + stepGather.GatherName
+                                });
+                                context.SaveChanges();
+                            }
+                            
                             break;
                         case Enums.StepType.Dial:
                             var dialSay = context.CallFlowStepSay.Where(s => s.CallFlowStepId == step.CallFlowStepId).FirstOrDefault();
@@ -147,7 +170,17 @@ namespace CallTrax.Controllers.API
                             else
                             {
                                 response.Dial(phone.DialPhoneNumber);
+
+                                //Save ACtion
+                                context.CallAction.Add(new CallAction
+                                {
+                                    CallId = callId,
+                                    ActionDateTime = DateTime.Now,
+                                    ActionDescription = "Call transfered: " +  phone.DialPhoneNumber 
+                                });
+                                context.SaveChanges();
                             }
+
                             break;
                         case Enums.StepType.Hangup:
                             var hangupSay = context.CallFlowStepSay.Where(s => s.CallFlowStepId == step.CallFlowStepId).FirstOrDefault();
@@ -156,6 +189,15 @@ namespace CallTrax.Controllers.API
                                 response.Say(hangupSay.SayText);
                             }
                             response.Hangup();
+                            //Save ACtion
+                            context.CallAction.Add(new CallAction
+                            {
+                                CallId = callId,
+                                ActionDateTime = DateTime.Now,
+                                ActionDescription = "Call hang up."
+                            });
+                            context.SaveChanges();
+
                             break;
                     }
                 }

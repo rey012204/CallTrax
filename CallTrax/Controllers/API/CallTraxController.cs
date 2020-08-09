@@ -77,15 +77,7 @@ namespace CallTrax.Controllers.API
                     }
                     else
                     {
-                        //Saving customer choise
-                        CallGather gather = new CallGather
-                        {
-                            CallId = callId,
-                            GatherName = step.GatherName,
-                            GatherValue = digits
-                        };
-                        context.CallGather.Add(gather);
-                        context.SaveChanges();
+                        string gatherValueName = "";
 
                         CallFlowStepOption  option = context.CallFlowStepOption.Where(o => o.CallFlowStepId == stepId && o.OptionValue == digits).FirstOrDefault();
 
@@ -95,6 +87,8 @@ namespace CallTrax.Controllers.API
                         }
                         else
                         {
+                            gatherValueName = option.OptionDescription;
+
                             CallFlowStep nextStep = context.CallFlowStep.Where(s => s.CallFlowStepId == option.NextCallFlowStepId).FirstOrDefault();
                             if (nextStep == null)
                             {
@@ -105,6 +99,17 @@ namespace CallTrax.Controllers.API
                                 response = GetResponse(callId, nextStep);
                             }
                         }
+
+                        //Saving customer choise
+                        CallGather gather = new CallGather
+                        {
+                            CallId = callId,
+                            GatherName = step.GatherName,
+                            GatherValue = digits,
+                            GatherValueName = gatherValueName
+                        };
+                        context.CallGather.Add(gather);
+                        context.SaveChanges();
                     }
                 }
             }

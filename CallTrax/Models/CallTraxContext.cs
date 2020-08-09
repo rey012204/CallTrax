@@ -33,7 +33,7 @@ namespace CallTrax.Models
         {
             if (!optionsBuilder.IsConfigured)
             {
-                //#warning To protect potentially sensitive information in your connection string, you should move it out of source code. See http://go.microsoft.com/fwlink/?LinkId=723263 for guidance on storing connection strings.
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. See http://go.microsoft.com/fwlink/?LinkId=723263 for guidance on storing connection strings.
                 optionsBuilder.UseSqlServer("Server=.\\SQLExpress;Database=CallTrax;Trusted_Connection=True;");
             }
         }
@@ -190,6 +190,10 @@ namespace CallTrax.Models
                 entity.Property(e => e.GatherValue)
                     .IsRequired()
                     .HasMaxLength(50)
+                    .IsFixedLength();
+
+                entity.Property(e => e.GatherValueName)
+                    .HasMaxLength(100)
                     .IsFixedLength();
 
                 entity.HasOne(d => d.Call)

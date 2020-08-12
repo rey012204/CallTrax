@@ -63,8 +63,8 @@ namespace CallTrax.Controllers.API
         }
         // GET: api/<IVRController>
         [HttpPost]
-        [Route("step/{stepId}")]
-        public TwiMLResult Step([FromRoute()] long stepId, [FromBody()] VoiceRequest request)
+        [Route("callback/{stepId}")]
+        public TwiMLResult Callback([FromRoute()] long stepId, [FromBody()] VoiceRequest request)
         {
             var response = new VoiceResponse();
 
@@ -258,11 +258,11 @@ namespace CallTrax.Controllers.API
         {
             try
             {
-                string url1 = Url.ActionLink("step", "calltrax").ToLower();
+                string url1 = Url.ActionLink("callback", "calltrax").ToLower();
                 int pos = url1.IndexOf("calltrax");
                 string url = url1.Substring(0, pos);
                 url += (url.IndexOf("api") == -1) ? "api/" : "";
-                url += "calltrax/step/" + step.CallFlowStepId.ToString();
+                url += "calltrax/callback/" + step.CallFlowStepId.ToString();
 
                 using (var context = new CallTraxContext())
                 {

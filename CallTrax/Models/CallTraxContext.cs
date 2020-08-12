@@ -17,6 +17,7 @@ namespace CallTrax.Models
 
         public virtual DbSet<Call> Call { get; set; }
         public virtual DbSet<CallAction> CallAction { get; set; }
+        public virtual DbSet<CallDirection> CallDirection { get; set; }
         public virtual DbSet<CallFlow> CallFlow { get; set; }
         public virtual DbSet<CallFlowStep> CallFlowStep { get; set; }
         public virtual DbSet<CallFlowStepDial> CallFlowStepDial { get; set; }
@@ -25,7 +26,10 @@ namespace CallTrax.Models
         public virtual DbSet<CallFlowStepOption> CallFlowStepOption { get; set; }
         public virtual DbSet<CallFlowStepSay> CallFlowStepSay { get; set; }
         public virtual DbSet<CallFlowStepType> CallFlowStepType { get; set; }
+        public virtual DbSet<CallFromPhoneAddress> CallFromPhoneAddress { get; set; }
         public virtual DbSet<CallGather> CallGather { get; set; }
+        public virtual DbSet<CallPhoneAddress> CallPhoneAddress { get; set; }
+        public virtual DbSet<CallToPhoneAddress> CallToPhoneAddress { get; set; }
         public virtual DbSet<Client> Client { get; set; }
         public virtual DbSet<ClientContact> ClientContact { get; set; }
         public virtual DbSet<Tollfree> Tollfree { get; set; }
@@ -43,13 +47,53 @@ namespace CallTrax.Models
         {
             modelBuilder.Entity<Call>(entity =>
             {
+                entity.HasKey(e => e.CallSid)
+                    .HasName("PK_Call_1");
+
+                entity.Property(e => e.CallSid)
+                    .HasMaxLength(34)
+                    .IsFixedLength();
+
+                entity.Property(e => e.AccountSid)
+                    .IsRequired()
+                    .HasMaxLength(34)
+                    .IsFixedLength();
+
+                entity.Property(e => e.ApiVersion)
+                    .IsRequired()
+                    .HasMaxLength(10)
+                    .IsFixedLength();
+
+                entity.Property(e => e.CallerName)
+                    .HasMaxLength(50)
+                    .IsFixedLength();
+
                 entity.Property(e => e.DateTimeReceived).HasColumnType("datetime");
 
-                entity.HasOne(d => d.CallFlow)
+                entity.Property(e => e.ForwardedFrom)
+                    .HasMaxLength(20)
+                    .IsFixedLength();
+
+                entity.Property(e => e.FromPhoneNumber)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .IsFixedLength();
+
+                entity.Property(e => e.ParentCallSid)
+                    .HasMaxLength(34)
+                    .IsFixedLength();
+
+                entity.Property(e => e.ToPhoneNumber)
+                    .IsRequired()
+                    .HasColumnName("ToPhoneNUmber")
+                    .HasMaxLength(20)
+                    .IsFixedLength();
+
+                entity.HasOne(d => d.DirectionNavigation)
                     .WithMany(p => p.Call)
-                    .HasForeignKey(d => d.CallFlowId)
+                    .HasForeignKey(d => d.Direction)
                     .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Call_CallFlow");
+                    .HasConstraintName("FK_Call_CallDirection");
             });
 
             modelBuilder.Entity<CallAction>(entity =>
@@ -61,11 +105,24 @@ namespace CallTrax.Models
                     .HasMaxLength(100)
                     .IsFixedLength();
 
-                entity.HasOne(d => d.Call)
+                entity.Property(e => e.CallSid)
+                    .IsRequired()
+                    .HasMaxLength(34)
+                    .IsFixedLength();
+
+                entity.HasOne(d => d.CallS)
                     .WithMany(p => p.CallAction)
-                    .HasForeignKey(d => d.CallId)
+                    .HasForeignKey(d => d.CallSid)
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK_CallAction_Call");
+            });
+
+            modelBuilder.Entity<CallDirection>(entity =>
+            {
+                entity.Property(e => e.CallDirectionName)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .IsFixedLength();
             });
 
             modelBuilder.Entity<CallFlow>(entity =>
@@ -197,8 +254,33 @@ namespace CallTrax.Models
                     .IsFixedLength();
             });
 
+            modelBuilder.Entity<CallFromPhoneAddress>(entity =>
+            {
+                entity.Property(e => e.CallSid)
+                    .IsRequired()
+                    .HasMaxLength(34)
+                    .IsFixedLength();
+
+                entity.HasOne(d => d.CallPhoneAddress)
+                    .WithMany(p => p.CallFromPhoneAddress)
+                    .HasForeignKey(d => d.CallPhoneAddressId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_CallFromPhoneAddress_CallPhoneAddress");
+
+                entity.HasOne(d => d.CallS)
+                    .WithMany(p => p.CallFromPhoneAddress)
+                    .HasForeignKey(d => d.CallSid)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_CallFromPhoneAddress_Call");
+            });
+
             modelBuilder.Entity<CallGather>(entity =>
             {
+                entity.Property(e => e.CallSid)
+                    .IsRequired()
+                    .HasMaxLength(34)
+                    .IsFixedLength();
+
                 entity.Property(e => e.GatherValue)
                     .IsRequired()
                     .HasMaxLength(50)
@@ -210,11 +292,51 @@ namespace CallTrax.Models
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK_CallGather_CallFlowStep");
 
-                entity.HasOne(d => d.Call)
+                entity.HasOne(d => d.CallS)
                     .WithMany(p => p.CallGather)
-                    .HasForeignKey(d => d.CallId)
+                    .HasForeignKey(d => d.CallSid)
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK_CallGather_Call");
+            });
+
+            modelBuilder.Entity<CallPhoneAddress>(entity =>
+            {
+                entity.Property(e => e.City)
+                    .HasMaxLength(50)
+                    .IsFixedLength();
+
+                entity.Property(e => e.Country)
+                    .HasMaxLength(10)
+                    .IsFixedLength();
+
+                entity.Property(e => e.State)
+                    .HasMaxLength(10)
+                    .IsFixedLength();
+
+                entity.Property(e => e.Zip)
+                    .HasMaxLength(10)
+                    .IsFixedLength();
+            });
+
+            modelBuilder.Entity<CallToPhoneAddress>(entity =>
+            {
+                entity.Property(e => e.CallSid)
+                    .IsRequired()
+                    .HasColumnName("CallSId")
+                    .HasMaxLength(34)
+                    .IsFixedLength();
+
+                entity.HasOne(d => d.CallPhoneAddress)
+                    .WithMany(p => p.CallToPhoneAddress)
+                    .HasForeignKey(d => d.CallPhoneAddressId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_CallToPhoneAddress_CallPhoneAddress");
+
+                entity.HasOne(d => d.CallS)
+                    .WithMany(p => p.CallToPhoneAddress)
+                    .HasForeignKey(d => d.CallSid)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_CallToPhoneAddress_Call");
             });
 
             modelBuilder.Entity<Client>(entity =>

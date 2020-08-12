@@ -7,9 +7,9 @@ namespace CallTrax.Models
     {
         public long CallActionId { get; set; }
         public DateTime ActionDateTime { get; set; }
-        public long CallId { get; set; }
+        public string CallSid { get; set; }
         public string ActionDescription { get; set; }
 
-        public virtual Call Call { get; set; }
+        public virtual Call CallS { get; set; }
     }
 }

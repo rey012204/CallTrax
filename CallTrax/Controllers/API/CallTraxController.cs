@@ -10,6 +10,11 @@ using CallTrax.ExtensionMethods;
 using Twilio.AspNet.Core;
 using CallTrax.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Twilio.AspNet.Common;
+using Twilio.Clients;
+using Twilio.Types;
+using CallTrax.Mappers;
+using Newtonsoft.Json;
 
 namespace CallTrax.Controllers.API
 {
@@ -19,55 +24,53 @@ namespace CallTrax.Controllers.API
     {
         // GET: api/<IVRController>
         [HttpGet]
-        [Route("flow/{id}")]
-        public TwiMLResult Flow(long id)
+        [Route("json/{callSid}")]
+        public string Json(string callSid, string digits)
+        {
+            VoiceRequest request = new VoiceRequest
+            {
+                CallSid = callSid,
+                Digits = digits,
+                AccountSid = "MyAccount",
+                From = "+13054575008",
+                To = "+18001234567",
+                CallStatus = "in-progress",
+                ApiVersion = "v1",
+                Direction = "inbound",
+                CallerName = "Reinaldo Gutierrez"
+            };
+            return JsonConvert.SerializeObject(request);
+        }
+        [HttpPost]
+        [Route("flow")]
+        public TwiMLResult Inbound(VoiceRequest request)
         {
             var response = new VoiceResponse();
 
             try
             {
-                using (var context = new CallTraxContext())
-                {
-                    var welcomeStep = context.CallFlowStep.Where(s => s.CallFlowId == id && s.IsWelcomeStep).FirstOrDefault();
+                //Save Call Information
+                response = ProcessInboundCall(request);
 
-                    if (welcomeStep == null)
-                    {
-                        //TODO
-                    }
-                    else
-                    {
-                        //Saving New Call
-                        var call = new Call()
-                        {
-                            DateTimeReceived = DateTime.Now,
-                            CallFlowId = welcomeStep.CallFlowId
-                        };
-                        context.Call.Add(call);
-                        context.SaveChanges();
-                        long callId = call.CallId;
-
-                        response = GetResponse(callId,welcomeStep);
-                    }
-                }
             }
             catch (Exception)
             {
 
                 throw;
             }
+  
             return TwiML(response);
         }
         // GET: api/<IVRController>
-        [HttpGet]
-        [Route("step/{callId}/{stepId}/{digits}")]
-        public TwiMLResult Step(long callId, long stepId, string digits)
+        [HttpPost]
+        [Route("step/{stepId}")]
+        public TwiMLResult Step([FromRoute()] long stepId, [FromBody()] VoiceRequest request)
         {
             var response = new VoiceResponse();
 
             try
             {
-                using (
-                    var context = new CallTraxContext())
+                using (var context = new CallTraxContext())
                 {
                     var step = context.CallFlowStepGather.Where(s => s.CallFlowStepId == stepId).FirstOrDefault();
 
@@ -79,7 +82,7 @@ namespace CallTrax.Controllers.API
                     {
                         string gatherValueName = "";
 
-                        CallFlowStepOption  option = context.CallFlowStepOption.Where(o => o.CallFlowStepId == stepId && o.OptionValue == digits).FirstOrDefault();
+                        CallFlowStepOption  option = context.CallFlowStepOption.Where(o => o.CallFlowStepId == stepId && o.OptionValue == request.Digits).FirstOrDefault();
 
                         if (option == null)
                         {
@@ -92,28 +95,28 @@ namespace CallTrax.Controllers.API
                             //Saving customer choice
                             CallGather gather = new CallGather
                             {
-                                CallId = callId,
+                                CallSid = request.CallSid,
                                 CallFlowStepId = step.CallFlowStepId,
-                                GatherValue = digits,
+                                GatherValue = request.Digits,
                             };
                             context.CallGather.Add(gather);
                             //Saving Action
                             context.CallAction.Add(new CallAction
                             {
-                                CallId = callId,
+                                CallSid = request.CallSid,
                                 ActionDateTime = DateTime.Now,
-                                ActionDescription = "Answer: " + digits + " - " + gatherValueName
+                                ActionDescription = "Answer: " + request.Digits + " - " + gatherValueName
                             });
                             context.SaveChanges();
 
                             CallFlowStep nextStep = context.CallFlowStep.Where(s => s.CallFlowStepId == option.NextCallFlowStepId).FirstOrDefault();
                             if (nextStep == null)
                             {
-
+                                //TODO
                             }
                             else
                             {
-                                response = GetResponse(callId, nextStep);
+                                response = GetResponse(request.CallSid, nextStep);
                             }
                         }
                     }
@@ -126,7 +129,49 @@ namespace CallTrax.Controllers.API
             }
             return TwiML(response);
         }
-        private VoiceResponse GetResponse(long callId, CallFlowStep step)
+        private VoiceResponse ProcessInboundCall(VoiceRequest request)
+        {
+            var response = new VoiceResponse();
+
+            try
+            {
+                using (var context = new CallTraxContext())
+                {
+                    var tollfree = context.Tollfree.Where(t => t.TollfreeNumber == request.To).FirstOrDefault();
+
+                    if (tollfree == null)
+                    {
+                        //No flow can be determine based on this 
+                        //Log the error
+                        response.Reject();
+                    }
+                    else
+                    {
+                        var welcomeStep = context.CallFlowStep.Where(s => s.CallFlowId == tollfree.CallFlowId && s.IsWelcomeStep).FirstOrDefault();
+
+                        if (welcomeStep == null)
+                        {
+                            //TODO: Log the error
+                            response.Reject();
+                        }
+                        else
+                        {
+                            //Saving New Call
+                            SaveCall(request, welcomeStep.CallFlowId);
+
+                            response = GetResponse(request.CallSid,welcomeStep);
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            return response;
+        }
+        private VoiceResponse GetResponse(string CallSid, CallFlowStep step)
         {
             var response = new VoiceResponse();
             try
@@ -136,7 +181,7 @@ namespace CallTrax.Controllers.API
                     switch (step.CallFlowStepType.ToStepType())
                     {
                         case Enums.StepType.Gather:
-                            var gather = GetGatherStep(callId, step);
+                            var gather = GetGatherStep(step);
                             response.Append(gather);
                             //Save Call Action
                             CallFlowStepGather stepGather = context.CallFlowStepGather.Where(g => g.CallFlowStepId == step.CallFlowStepId).FirstOrDefault();
@@ -148,7 +193,7 @@ namespace CallTrax.Controllers.API
                             {
                                 context.CallAction.Add(new CallAction
                                 {
-                                    CallId = callId,
+                                    CallSid = CallSid,
                                     ActionDateTime = DateTime.Now,
                                     ActionDescription = "Question: " + stepGather.GatherName
                                 });
@@ -174,7 +219,7 @@ namespace CallTrax.Controllers.API
                                 //Save ACtion
                                 context.CallAction.Add(new CallAction
                                 {
-                                    CallId = callId,
+                                    CallSid = CallSid,
                                     ActionDateTime = DateTime.Now,
                                     ActionDescription = "Call transfered: " +  phone.DialPhoneNumber 
                                 });
@@ -192,7 +237,7 @@ namespace CallTrax.Controllers.API
                             //Save ACtion
                             context.CallAction.Add(new CallAction
                             {
-                                CallId = callId,
+                                CallSid = CallSid,
                                 ActionDateTime = DateTime.Now,
                                 ActionDescription = "Call hang up."
                             });
@@ -209,7 +254,7 @@ namespace CallTrax.Controllers.API
             }
             return response;
         }
-        private Gather GetGatherStep(long callId, CallFlowStep step)
+        private Gather GetGatherStep(CallFlowStep step)
         {
             try
             {
@@ -217,7 +262,7 @@ namespace CallTrax.Controllers.API
                 int pos = url1.IndexOf("calltrax");
                 string url = url1.Substring(0, pos);
                 url += (url.IndexOf("api") == -1) ? "api/" : "";
-                url += "calltrax/step/" + callId + "/" + step.CallFlowStepId.ToString();
+                url += "calltrax/step/" + step.CallFlowStepId.ToString();
 
                 using (var context = new CallTraxContext())
                 {
@@ -234,6 +279,34 @@ namespace CallTrax.Controllers.API
                         gather.Say(say);
                     }
                     return gather;
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+        private void SaveCall(VoiceRequest request, long flowId)
+        {
+            try
+            {
+                using( var context = new CallTraxContext())
+                {
+                    Call call = context.Call.Where(c => c.CallSid == request.CallSid).FirstOrDefault();
+
+                    if (call == null) //New Call
+                    {
+                        Call newcall = CallMapper.VoiceRequestToCall(request);
+                        newcall.CallFlowId = flowId;
+                        context.Add(newcall);
+                    }
+                    else
+                    {
+                        call.CallStatus = (short)request.CallStatus.ToCallStatus();
+                    }
+
+                    context.SaveChanges();
                 }
             }
             catch (Exception)

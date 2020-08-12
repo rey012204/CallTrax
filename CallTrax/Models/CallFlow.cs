@@ -7,7 +7,6 @@ namespace CallTrax.Models
     {
         public CallFlow()
         {
-            Call = new HashSet<Call>();
             CallFlowStep = new HashSet<CallFlowStep>();
             Tollfree = new HashSet<Tollfree>();
         }
@@ -17,7 +16,6 @@ namespace CallTrax.Models
         public string FlowName { get; set; }
 
         public virtual Client Client { get; set; }
-        public virtual ICollection<Call> Call { get; set; }
         public virtual ICollection<CallFlowStep> CallFlowStep { get; set; }
         public virtual ICollection<Tollfree> Tollfree { get; set; }
     }

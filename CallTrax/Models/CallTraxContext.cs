@@ -28,10 +28,15 @@ namespace CallTrax.Models
         public virtual DbSet<CallFlowStepType> CallFlowStepType { get; set; }
         public virtual DbSet<CallFromPhoneAddress> CallFromPhoneAddress { get; set; }
         public virtual DbSet<CallGather> CallGather { get; set; }
+        public virtual DbSet<CallGatherAttempt> CallGatherAttempt { get; set; }
         public virtual DbSet<CallPhoneAddress> CallPhoneAddress { get; set; }
+        public virtual DbSet<CallSurvey> CallSurvey { get; set; }
+        public virtual DbSet<CallSurveyAnswer> CallSurveyAnswer { get; set; }
+        public virtual DbSet<CallSurveyQuestion> CallSurveyQuestion { get; set; }
         public virtual DbSet<CallToPhoneAddress> CallToPhoneAddress { get; set; }
         public virtual DbSet<Client> Client { get; set; }
         public virtual DbSet<ClientContact> ClientContact { get; set; }
+        public virtual DbSet<SurveyQuestionType> SurveyQuestionType { get; set; }
         public virtual DbSet<Tollfree> Tollfree { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -197,11 +202,21 @@ namespace CallTrax.Models
 
                 entity.Property(e => e.CallFlowStepId).ValueGeneratedNever();
 
+                entity.Property(e => e.RetrySay)
+                    .HasMaxLength(100)
+                    .IsFixedLength();
+
                 entity.HasOne(d => d.CallFlowStep)
                     .WithOne(p => p.CallFlowStepGatherRetry)
                     .HasForeignKey<CallFlowStepGatherRetry>(d => d.CallFlowStepId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK_CallFlowStepGatherRetry_CallFlowStepGather");
+
+                entity.HasOne(d => d.FailCallFlowStep)
+                    .WithMany(p => p.CallFlowStepGatherRetry)
+                    .HasForeignKey(d => d.FailCallFlowStepId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_CallFlowStepGatherRetry_CallFlowStep");
             });
 
             modelBuilder.Entity<CallFlowStepOption>(entity =>
@@ -299,6 +314,26 @@ namespace CallTrax.Models
                     .HasConstraintName("FK_CallGather_Call");
             });
 
+            modelBuilder.Entity<CallGatherAttempt>(entity =>
+            {
+                entity.Property(e => e.CallSid)
+                    .IsRequired()
+                    .HasMaxLength(34)
+                    .IsFixedLength();
+
+                entity.HasOne(d => d.CallFlowStep)
+                    .WithMany(p => p.CallGatherAttempt)
+                    .HasForeignKey(d => d.CallFlowStepId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_CallGatherAttempt_CallFlowStepGather");
+
+                entity.HasOne(d => d.CallS)
+                    .WithMany(p => p.CallGatherAttempt)
+                    .HasForeignKey(d => d.CallSid)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_CallGatherAttempt_Call");
+            });
+
             modelBuilder.Entity<CallPhoneAddress>(entity =>
             {
                 entity.Property(e => e.City)
@@ -316,6 +351,65 @@ namespace CallTrax.Models
                 entity.Property(e => e.Zip)
                     .HasMaxLength(10)
                     .IsFixedLength();
+            });
+
+            modelBuilder.Entity<CallSurvey>(entity =>
+            {
+                entity.Property(e => e.CallSurveyName)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .IsFixedLength();
+
+                entity.HasOne(d => d.Client)
+                    .WithMany(p => p.CallSurvey)
+                    .HasForeignKey(d => d.ClientId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_CallSurvey_Client");
+            });
+
+            modelBuilder.Entity<CallSurveyAnswer>(entity =>
+            {
+                entity.Property(e => e.CallSid)
+                    .IsRequired()
+                    .HasMaxLength(34)
+                    .IsFixedLength();
+
+                entity.Property(e => e.SurveyAnswer)
+                    .HasMaxLength(100)
+                    .IsFixedLength();
+
+                entity.HasOne(d => d.CallS)
+                    .WithMany(p => p.CallSurveyAnswer)
+                    .HasForeignKey(d => d.CallSid)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_CallSurveyAnswer_Call");
+
+                entity.HasOne(d => d.CallSurveyQuestion)
+                    .WithMany(p => p.CallSurveyAnswer)
+                    .HasForeignKey(d => d.CallSurveyQuestionId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_CallSurveyAnswer_CallSurveyQuestion");
+            });
+
+            modelBuilder.Entity<CallSurveyQuestion>(entity =>
+            {
+                entity.HasOne(d => d.CallFlowStep)
+                    .WithMany(p => p.CallSurveyQuestion)
+                    .HasForeignKey(d => d.CallFlowStepId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_CallSurveyQuestion_CallFlowStepGather");
+
+                entity.HasOne(d => d.CallSurvey)
+                    .WithMany(p => p.CallSurveyQuestion)
+                    .HasForeignKey(d => d.CallSurveyId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_CallSurveyQuestion_CallSurvey");
+
+                entity.HasOne(d => d.QuestionTypeNavigation)
+                    .WithMany(p => p.CallSurveyQuestion)
+                    .HasForeignKey(d => d.QuestionType)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_CallSurveyQuestion_SurveyQuestionType");
             });
 
             modelBuilder.Entity<CallToPhoneAddress>(entity =>
@@ -373,6 +467,14 @@ namespace CallTrax.Models
                     .HasForeignKey(d => d.ClientId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK_ClientContact_Client");
+            });
+
+            modelBuilder.Entity<SurveyQuestionType>(entity =>
+            {
+                entity.Property(e => e.SureveyQuestionTypeName)
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .IsFixedLength();
             });
 
             modelBuilder.Entity<Tollfree>(entity =>

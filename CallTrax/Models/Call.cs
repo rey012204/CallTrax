@@ -10,6 +10,8 @@ namespace CallTrax.Models
             CallAction = new HashSet<CallAction>();
             CallFromPhoneAddress = new HashSet<CallFromPhoneAddress>();
             CallGather = new HashSet<CallGather>();
+            CallGatherAttempt = new HashSet<CallGatherAttempt>();
+            CallSurveyAnswer = new HashSet<CallSurveyAnswer>();
             CallToPhoneAddress = new HashSet<CallToPhoneAddress>();
         }
 
@@ -30,6 +32,8 @@ namespace CallTrax.Models
         public virtual ICollection<CallAction> CallAction { get; set; }
         public virtual ICollection<CallFromPhoneAddress> CallFromPhoneAddress { get; set; }
         public virtual ICollection<CallGather> CallGather { get; set; }
+        public virtual ICollection<CallGatherAttempt> CallGatherAttempt { get; set; }
+        public virtual ICollection<CallSurveyAnswer> CallSurveyAnswer { get; set; }
         public virtual ICollection<CallToPhoneAddress> CallToPhoneAddress { get; set; }
     }
 }

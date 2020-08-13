@@ -8,6 +8,7 @@ namespace CallTrax.Models
         public Client()
         {
             CallFlow = new HashSet<CallFlow>();
+            CallSurvey = new HashSet<CallSurvey>();
             ClientContact = new HashSet<ClientContact>();
         }
 
@@ -15,6 +16,7 @@ namespace CallTrax.Models
         public string ClientName { get; set; }
 
         public virtual ICollection<CallFlow> CallFlow { get; set; }
+        public virtual ICollection<CallSurvey> CallSurvey { get; set; }
         public virtual ICollection<ClientContact> ClientContact { get; set; }
     }
 }

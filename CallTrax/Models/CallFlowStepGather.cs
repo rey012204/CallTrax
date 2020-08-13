@@ -8,6 +8,8 @@ namespace CallTrax.Models
         public CallFlowStepGather()
         {
             CallFlowStepOption = new HashSet<CallFlowStepOption>();
+            CallGatherAttempt = new HashSet<CallGatherAttempt>();
+            CallSurveyQuestion = new HashSet<CallSurveyQuestion>();
         }
 
         public long CallFlowStepId { get; set; }
@@ -17,5 +19,7 @@ namespace CallTrax.Models
         public virtual CallFlowStep CallFlowStep { get; set; }
         public virtual CallFlowStepGatherRetry CallFlowStepGatherRetry { get; set; }
         public virtual ICollection<CallFlowStepOption> CallFlowStepOption { get; set; }
+        public virtual ICollection<CallGatherAttempt> CallGatherAttempt { get; set; }
+        public virtual ICollection<CallSurveyQuestion> CallSurveyQuestion { get; set; }
     }
 }

@@ -42,8 +42,8 @@ namespace CallTrax.Controllers.API
             return JsonConvert.SerializeObject(request);
         }
         [HttpPost]
-        [Route("flow")]
-        public TwiMLResult Inbound(VoiceRequest request)
+        [Route("inbound")]
+        public TwiMLResult Inbound([FromBody()] VoiceRequest request)
         {
             var response = new VoiceResponse();
 
@@ -72,21 +72,63 @@ namespace CallTrax.Controllers.API
             {
                 using (var context = new CallTraxContext())
                 {
-                    var step = context.CallFlowStepGather.Where(s => s.CallFlowStepId == stepId).FirstOrDefault();
+                    var gatherStep = context.CallFlowStepGather.Where(s => s.CallFlowStepId == stepId).FirstOrDefault();
 
-                    if (step == null)
+                    if (gatherStep == null)
                     {
                         //TODO
                     }
                     else
                     {
-                        string gatherValueName = "";
+                        //Check if it's a Survey gather step
+                        bool isSurveyStep = false;
+                        var question = context.CallSurveyQuestion.Where(q => q.CallFlowStepId == gatherStep.CallFlowStepId).FirstOrDefault();
+                        if (question != null)
+                        {
+                            isSurveyStep = true;
+                            //Save Survey Answer
+                            context.CallSurveyAnswer.Add(new CallSurveyAnswer
+                            {
+                                CallSid= request.CallSid,
+                                CallSurveyQuestionId = question.CallSurveyQuestionId,
+                                SurveyAnswer = request.Digits
+                            });
+                            context.SaveChanges();
+                        }
 
+                        string gatherValueName = "";
                         CallFlowStepOption  option = context.CallFlowStepOption.Where(o => o.CallFlowStepId == stepId && o.OptionValue == request.Digits).FirstOrDefault();
+                        if(option == null && isSurveyStep)
+                        {
+                            //for survey check for first option, we go to next step no mather the value
+                            option = context.CallFlowStepOption.Where(o => o.CallFlowStepId == stepId).FirstOrDefault();
+                        }
 
                         if (option == null)
                         {
-                            //TODO
+                            //Retry Process
+                            if (isSurveyStep)
+                            {
+                                //TODO
+                            }
+                            else
+                            {
+                                CallFlowStepGatherRetry gatherretry = context.CallFlowStepGatherRetry.Where(gr => gr.CallFlowStepId == gatherStep.CallFlowStepId).FirstOrDefault();
+                                if (AllowRetry(request, gatherStep))
+                                {
+                                    string retrysay = "";
+                                    if (gatherretry != null) retrysay = gatherretry.RetrySay;
+                                    response = GetResponse(request.CallSid, gatherStep.CallFlowStep);
+                                    if (!string.IsNullOrEmpty(retrysay))
+                                    {
+                                        response.Say(retrysay);
+                                    }
+                                }
+                                else
+                                {
+                                    response = GetResponse(request.CallSid, gatherretry.FailCallFlowStep);
+                                }
+                            }
                         }
                         else
                         {
@@ -96,7 +138,7 @@ namespace CallTrax.Controllers.API
                             CallGather gather = new CallGather
                             {
                                 CallSid = request.CallSid,
-                                CallFlowStepId = step.CallFlowStepId,
+                                CallFlowStepId = gatherStep.CallFlowStepId,
                                 GatherValue = request.Digits,
                             };
                             context.CallGather.Add(gather);
@@ -159,7 +201,8 @@ namespace CallTrax.Controllers.API
                             //Saving New Call
                             SaveCall(request, welcomeStep.CallFlowId);
 
-                            response = GetResponse(request.CallSid,welcomeStep);
+                            response = GetResponse(request.CallSid, welcomeStep);
+                            
                         }
                     }
                 }
@@ -308,6 +351,44 @@ namespace CallTrax.Controllers.API
 
                     context.SaveChanges();
                 }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+        private bool AllowRetry(VoiceRequest request, CallFlowStepGather step)
+        {
+            try
+            {
+                short maxAttempts = step.Attempts;
+                short actualAttempts = 0;
+                using (var context = new CallTraxContext())
+                {
+                    CallGatherAttempt retry = context.CallGatherAttempt.Where(r => r.CallSid == request.CallSid && r.CallFlowStepId == step.CallFlowStepId).FirstOrDefault();
+                    if (retry == null)
+                    {
+                        actualAttempts += 1;
+                        context.CallGatherAttempt.Add(new CallGatherAttempt
+                        {
+                            CallSid = request.CallSid,
+                            CallFlowStepId = step.CallFlowStepId,
+                            Attempts = actualAttempts
+                        });
+
+                    }
+                    else
+                    {
+                        actualAttempts = retry.Attempts;
+                        actualAttempts += 1;
+                        retry.Attempts = actualAttempts;
+                    }
+                    context.SaveChanges();
+
+                    return (actualAttempts < maxAttempts);
+                }
+
             }
             catch (Exception)
             {

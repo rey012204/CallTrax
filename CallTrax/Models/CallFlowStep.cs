@@ -7,6 +7,7 @@ namespace CallTrax.Models
     {
         public CallFlowStep()
         {
+            CallFlowStepGatherRetry = new HashSet<CallFlowStepGatherRetry>();
             CallGather = new HashSet<CallGather>();
         }
 
@@ -20,6 +21,7 @@ namespace CallTrax.Models
         public virtual CallFlowStepDial CallFlowStepDial { get; set; }
         public virtual CallFlowStepGather CallFlowStepGather { get; set; }
         public virtual CallFlowStepSay CallFlowStepSay { get; set; }
+        public virtual ICollection<CallFlowStepGatherRetry> CallFlowStepGatherRetry { get; set; }
         public virtual ICollection<CallGather> CallGather { get; set; }
     }
 }

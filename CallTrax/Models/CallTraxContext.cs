@@ -6,6 +6,8 @@ namespace CallTrax.Models
 {
     public partial class CallTraxContext : DbContext
     {
+        private static string ConnectionString { get; set; }
+
         public CallTraxContext()
         {
         }
@@ -13,6 +15,19 @@ namespace CallTrax.Models
         public CallTraxContext(DbContextOptions<CallTraxContext> options)
             : base(options)
         {
+        }
+
+        public static void SetConnectionString(string connectionString)
+        {
+            if (ConnectionString == null)
+
+            {
+                ConnectionString = connectionString;
+            }
+            else
+            {
+                throw new Exception();
+            }
         }
 
         public virtual DbSet<Call> Call { get; set; }
@@ -44,7 +59,8 @@ namespace CallTrax.Models
             if (!optionsBuilder.IsConfigured)
             {
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. See http://go.microsoft.com/fwlink/?LinkId=723263 for guidance on storing connection strings.
-                optionsBuilder.UseSqlServer("Server=.\\SQLExpress;Database=CallTrax;Trusted_Connection=True;");
+                //optionsBuilder.UseSqlServer("Server=.\\SQLExpress;Database=CallTrax;Trusted_Connection=True;");
+                optionsBuilder.UseSqlServer(ConnectionString);
             }
         }
 

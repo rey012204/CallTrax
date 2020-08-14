@@ -15,6 +15,7 @@ using Twilio.Clients;
 using Twilio.Types;
 using CallTrax.Mappers;
 using Newtonsoft.Json;
+using Microsoft.Extensions.Configuration;
 
 namespace CallTrax.Controllers.API
 {
@@ -22,24 +23,47 @@ namespace CallTrax.Controllers.API
     [ApiController]
     public class CallTraxController : TwilioController
     {
+        IConfiguration configuration;
+
+        public CallTraxController(IConfiguration config)
+        {
+            configuration = config;
+        }
+
         // GET: api/<IVRController>
         [HttpGet]
-        [Route("json/{callSid}")]
+        [Route("json/{callSid}/{digits}")]
         public string Json(string callSid, string digits)
         {
-            VoiceRequest request = new VoiceRequest
+            try
             {
-                CallSid = callSid,
-                Digits = digits,
-                AccountSid = "MyAccount",
-                From = "+13054575008",
-                To = "+18001234567",
-                CallStatus = "in-progress",
-                ApiVersion = "v1",
-                Direction = "inbound",
-                CallerName = "Reinaldo Gutierrez"
-            };
-            return JsonConvert.SerializeObject(request);
+                string toPhone = "";
+                using (var context = new CallTraxContext())
+                {
+                    Tollfree tollfree = context.Tollfree.Where(t => t.CallFlowId == 1).FirstOrDefault();
+                    toPhone = tollfree.TollfreeNumber.Trim();
+                }
+
+                VoiceRequest request = new VoiceRequest
+                {
+                    CallSid = callSid,
+                    Digits = digits,
+                    AccountSid = "MyAccount",
+                    From = "+13054575008",
+                    To = (toPhone == null) ? "+18001234567" : toPhone,
+                    CallStatus = "in-progress",
+                    ApiVersion = "v1",
+                    Direction = "inbound",
+                    CallerName = "Reinaldo Gutierrez"
+                };
+                return JsonConvert.SerializeObject(request);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+
         }
         [HttpPost]
         [Route("inbound")]
